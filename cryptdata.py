@@ -10,18 +10,40 @@ import sys
 import os
 import argparse
 import base64
+import hashlib
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
+
+def calculate_checksum(file, algorithm='sha256'):
+    # Open the file in binary mode
+    with open(file, 'rb') as file:
+        # Create a hash object using the specified algorithm
+        hash_object = hashlib.new(algorithm)
+
+        # Read the file in chunks to avoid loading large files into memory
+        for chunk in iter(lambda: file.read(4096), b''):
+            hash_object.update(chunk)
+
+    # Return the hexadecimal digest of the calculated hash
+    return hash_object.hexdigest()
+
+# Example usage:
+# file_path = 'path/to/your/file'
+# checksum = calculate_checksum(file_path)
+# print(f"Checksum (SHA-256) of '{file_path}': {checksum}")
+
 def get_password():
-    while True:
-        password = input("Enter your password: ")
-        confirm_password = input("Confirm your password: ")
-        if password == confirm_password:
-            return password.encode('utf-8')
-        else:
-            print("Passwords do not match. Please try again.")
+    password = input("Enter your password: ")
+    if args.mode == "encrypt":
+        while True:
+            confirm_password = input("Confirm your password: ")
+            if password == confirm_password:
+                return password.encode('utf-8')
+            else:
+                print("Passwords do not match. Please try again.")
+    return password.encode('utf-8')
 
 def get_key():
     salt = b'\x9fi\xef]F\xd9uo\x81\x10d\x07\xf9\x121\xda' 
@@ -49,7 +71,11 @@ def encrypt(infile, outfile):
             for line in f_in:
                 encrypted_line = encrypt_line(line.strip(), key)
                 f_out.write(encrypted_line + b'\n')
+    checksum = calculate_checksum(outfile)
+    with open(outfile + ".sha256", "w") as check_file:
+        print(checksum, file=check_file)
     print("Encryption complete. Encrypted file saved as", outfile)
+    print(f"Checksum (SHA-256) of '{outfile}': {checksum}")
 
 def decrypt_line(line, key):
     cipher_suite = Fernet(key)
@@ -59,15 +85,25 @@ def decrypt(infile,outfile):
     print("Decrypting "+infile+"...")
     key = get_key()
     f = Fernet(key)
+    with open(infile + ".sha256", 'r') as check_file:
+        read_checksum = check_file.read()
+    read_checksum = read_checksum.rstrip()
+    checksum = calculate_checksum(infile)
+    if read_checksum != checksum:
+        print(f"Error: {infile} checksum does not match.\nStored: {read_checksum}\n{infile}: {checksum}")
+        sys.exit(1) 
     with open(infile, 'r') as f_in:
         with open(outfile, 'w') as f_out:
             for line in f_in:
                 # Remove trailing newline character
                 line = line.rstrip()
-                decrypted_line = f.decrypt(line.encode()).decode()
-                f_out.write(decrypted_line + '\n')
+                try:
+                    decrypted_line = f.decrypt(line.encode()).decode()
+                    f_out.write(decrypted_line + '\n')
+                except Exception as e:
+                    print("Error decrypting data. Do you have the correct password?")
+                    sys.exit(1)
     print("Decryption complete. Decrypted file saved as", outfile)
-
 def read_file_and_print_lines(file_path):
     try:
         with open(file_path, 'r') as file:
