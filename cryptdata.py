@@ -54,17 +54,17 @@ def get_key():
     key = base64.urlsafe_b64encode(kdf.derive(password))
     return key
 
-def encrypt_line(line, key):
-    cipher_suite = Fernet(key)
-    encrypted_line = cipher_suite.encrypt(line.encode())
-    return encrypted_line
-
 def check_result(result):
     # Results should be between 1 - 9
     if 0 < int(result) < 11:
         return True
     else:
         return False
+
+def encrypt_line(line, key):
+    cipher_suite = Fernet(key)
+    encrypted_line = cipher_suite.encrypt(line.encode())
+    return encrypted_line
 
 def encrypt(infile, outfile):
     print("Encrypting "+infile+"...")
@@ -86,10 +86,6 @@ def encrypt(infile, outfile):
     print("Encryption complete. Encrypted file saved as", outfile)
     print(f"Checksum (SHA-256) of '{outfile}': {checksum}")
 
-def decrypt_line(line, key):
-    cipher_suite = Fernet(key)
-    encrypted_line = cipher_suite.decrypt(line.encode())
-
 def decrypt(infile,outfile):
     print("Decrypting "+infile+"...")
     key = get_key()
@@ -101,14 +97,14 @@ def decrypt(infile,outfile):
     if read_checksum != checksum:
         print(f"Error: {infile} checksum does not match.\nStored: {read_checksum}\n{infile}: {checksum}")
         sys.exit(1) 
-    with open(infile, 'rb') as f_in:
+    with open(infile, 'r') as f_in:
         with open(outfile, 'w', newline='') as f_out:
             for line in f_in:
                 line = line.rstrip()
                 try:
                     decrypted_line = f.decrypt(line)
-                    #f_out.write(decrypted_line + '\n')
-                    f_out.write(str(decrypted_line) + "\n")
+                    decrypted_line = decrypted_line.decode()
+                    f_out.write(decrypted_line + '\n')
                 except Exception as e:
                     print("Error decrypting data: " + str(e))
                     sys.exit(1)
