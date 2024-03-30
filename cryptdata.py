@@ -9,8 +9,10 @@
 import sys
 import os
 import argparse
+import csv
 import base64
 import hashlib
+from csv import DictWriter
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
@@ -28,11 +30,6 @@ def calculate_checksum(file, algorithm='sha256'):
 
     # Return the hexadecimal digest of the calculated hash
     return hash_object.hexdigest()
-
-# Example usage:
-# file_path = 'path/to/your/file'
-# checksum = calculate_checksum(file_path)
-# print(f"Checksum (SHA-256) of '{file_path}': {checksum}")
 
 def get_password():
     password = input("Enter your password: ")
@@ -62,14 +59,26 @@ def encrypt_line(line, key):
     encrypted_line = cipher_suite.encrypt(line.encode())
     return encrypted_line
 
+def check_result(result):
+    # Results should be between 1 - 9
+    if 0 < int(result) < 11:
+        return True
+    else:
+        return False
+
 def encrypt(infile, outfile):
     print("Encrypting "+infile+"...")
     key = get_key()
     f = Fernet(key)
-    with open(infile, 'r') as f_in:
+
+    with open(infile, 'r') as csvfile:
+        csv_reader = csv.reader(csvfile)
         with open(outfile, 'wb') as f_out:
-            for line in f_in:
-                encrypted_line = encrypt_line(line.strip(), key)
+            for row in csv_reader:
+                if not check_result(row[11]):
+                    print("ERROR: Lab result must be between 1-9 (skipping): " + ','.join(row) + "\n")
+                    continue
+                encrypted_line = encrypt_line(','.join(row), key)
                 f_out.write(encrypted_line + b'\n')
     checksum = calculate_checksum(outfile)
     with open(outfile + ".sha256", "w") as check_file:
@@ -92,16 +101,16 @@ def decrypt(infile,outfile):
     if read_checksum != checksum:
         print(f"Error: {infile} checksum does not match.\nStored: {read_checksum}\n{infile}: {checksum}")
         sys.exit(1) 
-    with open(infile, 'r') as f_in:
-        with open(outfile, 'w') as f_out:
+    with open(infile, 'rb') as f_in:
+        with open(outfile, 'w', newline='') as f_out:
             for line in f_in:
-                # Remove trailing newline character
                 line = line.rstrip()
                 try:
-                    decrypted_line = f.decrypt(line.encode()).decode()
-                    f_out.write(decrypted_line + '\n')
+                    decrypted_line = f.decrypt(line)
+                    #f_out.write(decrypted_line + '\n')
+                    f_out.write(str(decrypted_line) + "\n")
                 except Exception as e:
-                    print("Error decrypting data. Do you have the correct password?")
+                    print("Error decrypting data: " + str(e))
                     sys.exit(1)
     print("Decryption complete. Decrypted file saved as", outfile)
 def read_file_and_print_lines(file_path):
