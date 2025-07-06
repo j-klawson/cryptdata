@@ -4,17 +4,8 @@
 ## Files:
 
 *   `cryptdata.py`: Likely contains the core encryption/decryption logic.
-*   `dataset.txt`: Original dataset.
-*   `decrypted_dataset.txt`: Decrypted version of `dataset.txt`.
-*   `decrypted.txt`: Another decrypted file.
-*   `encrypted_dataset.txt`: Encrypted version of `dataset.txt`.
-*   `encrypted_dataset.txt.sha256`: SHA256 checksum for `encrypted_dataset.txt`.
-*   `encrypted.txt`: Another encrypted file.
-*   `encrypted.txt.sha256`: SHA256 checksum for `encrypted.txt`.
-*   `patients-1000.csv`: A CSV file containing 1000 patient records.
-*   `patients-decrypted.csv`: Decrypted version of patient data.
-*   `patients.enc`: Encrypted patient data.
-*   `patients.enc.sha256`: SHA256 checksum for `patients.enc`.
+*   `example-data.txt`: Unstructured data.
+*   `example-patients-1000.csv`: Comma delimited sample of 1000 "patient" records.
 
 ## Usage:
 
